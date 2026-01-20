@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Sistema de Coleta de Fardamento</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background: #f4f4f4;
+    }
+    .container {
+      max-width: 600px;
+      margin: 30px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    h2 { text-align: center; }
+    input, select, button {
+      width: 100%;
+      margin: 8px 0;
+      padding: 10px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #007bff;
+      color: #fff;
+      cursor: pointer;
+      border: none;
+    }
+    button:hover { background: #0056b3; }
+    .hidden { display: none; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    table, th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+    }
+    th { background: #007bff; color: #fff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Sistema de Coleta de Fardamento</h2>
+
+    <!-- Login -->
+    <div id="loginSection">
+      <h3>Login</h3>
+      <input type="text" id="loginUser" placeholder="Usuário">
+      <input type="password" id="loginPass" placeholder="Senha">
+      <button onclick="login()">Entrar</button>
+    </div>
+
+    <!-- Área do usuário -->
+    <div id="userSection" class="hidden">
+      <h3>Registrar Retirada</h3>
+      <select id="itemTipo">
+        <option value="">Selecione o item</option>
+        <option>Camisa em Brim sem Faixa</option>
+        <option>Calça em Brim sem Faixa</option>
+        <option>Camisa em Brim com Faixa Cinza</option>
+        <option>Camisa em Brim com Faixa Verde</option>
+        <option>Camisa em Brim com Faixa Laranja</option>
+        <option>Camisa Social</option>
+        <option>Camisa Malha PP</option>
+        <option>Camisa Malha P</option>
+        <option>Camisa Malha M</option>
+        <option>Camisa Malha G</option>
+        <option>Camisa Malha GG</option>
+      </select>
+      <button onclick="registrarRetirada()">Registrar</button>
+      <button onclick="logout()">Sair</button>
+    </div>
+
+    <!-- Área do administrador -->
+    <div id="adminSection" class="hidden">
+      <h3>Área do Administrador</h3>
+
+      <h4>Cadastrar Usuário</h4>
+      <input type="text" id="newUser" placeholder="Novo usuário">
+      <input type="password" id="newPass" placeholder="Senha">
+      <select id="newRole">
+        <option value="user">Usuário</option>
+        <option value="admin">Administrador</option>
+      </select>
+      <button onclick="cadastrarUsuario()">Cadastrar</button>
+
+      <h4>Relatório Mensal</h4>
+      <input type="month" id="mesRelatorio">
+      <button onclick="gerarRelatorio()">Gerar</button>
+      <div id="relatorio"></div>
+
+      <button onclick="logout()">Sair</button>
+    </div>
+  </div>
+
+  <script>
+    // Inicialização
+    if (!localStorage.getItem("usuarios")) {
+      const admin = [{ usuario: "admin", senha: "123", role: "admin" }];
+      localStorage.setItem("usuarios", JSON.stringify(admin));
+    }
+    if (!localStorage.getItem("registros")) {
+      localStorage.setItem("registros", JSON.stringify([]));
+    }
+
+    let usuarioAtual = null;
+
+    function login() {
+      const user = document.getElementById("loginUser").value;
+      const pass = document.getElementById("loginPass").value;
+      const usuarios = JSON.parse(localStorage.getItem("usuarios"));
+
+      const encontrado = usuarios.find(u => u.usuario === user && u.senha === pass);
+      if (encontrado) {
+        usuarioAtual = encontrado;
+        document.getElementById("loginSection").classList.add("hidden");
+        if (usuarioAtual.role === "admin") {
+          document.getElementById("adminSection").classList.remove("hidden");
+        } else {
+          document.getElementById("userSection").classList.remove("hidden");
+        }
+      } else {
+        alert("Usuário ou senha inválidos");
+      }
+    }
+
+    function logout() {
+      usuarioAtual = null;
+      document.getElementById("loginSection").classList.remove("hidden");
+      document.getElementById("userSection").classList.add("hidden");
+      document.getElementById("adminSection").classList.add("hidden");
+    }
+
+    function cadastrarUsuario() {
+      const user = document.getElementById("newUser").value;
+      const pass = document.getElementById("newPass").value;
+      const role = document.getElementById("newRole").value;
+
+      if (!user || !pass) { alert("Preencha os dados!"); return; }
+
+      const usuarios = JSON.parse(localStorage.getItem("usuarios"));
+      if (usuarios.find(u => u.usuario === user)) {
+        alert("Usuário já existe!");
+        return;
+      }
+      usuarios.push({ usuario: user, senha: pass, role });
+      localStorage.setItem("usuarios", JSON.stringify(usuarios));
+      alert("Usuário cadastrado!");
+      document.getElementById("newUser").value = "";
+      document.getElementById("newPass").value = "";
+    }
+
+    function registrarRetirada() {
+      const item = document.getElementById("itemTipo").value;
+      if (!item) { alert("Selecione um item!"); return; }
+
+      const registros = JSON.parse(localStorage.getItem("registros"));
+      registros.push({
+        usuario: usuarioAtual.usuario,
+        item: item,
+        data: new Date().toISOString()
+      });
+      localStorage.setItem("registros", JSON.stringify(registros));
+      alert("Retirada registrada!");
+    }
+
+    function gerarRelatorio() {
+      const mes = document.getElementById("mesRelatorio").value;
+      if (!mes) { alert("Selecione um mês!"); return; }
+
+      const registros = JSON.parse(localStorage.getItem("registros"));
+      const filtrados = registros.filter(r => r.data.startsWith(mes));
+
+      if (filtrados.length === 0) {
+        document.getElementById("relatorio").innerHTML = "<p>Nenhum registro encontrado.</p>";
+        return;
+      }
+
+      let html = "<table><tr><th>Usuário</th><th>Item</th><th>Data</th></tr>";
+      filtrados.forEach(r => {
+        html += `<tr>
+          <td>${r.usuario}</td>
+          <td>${r.item}</td>
+          <td>${new Date(r.data).toLocaleString()}</td>
+        </tr>`;
+      });
+      html += "</table>";
+
+      document.getElementById("relatorio").innerHTML = html;
+    }
+  </script>
+</body>
+</html>
